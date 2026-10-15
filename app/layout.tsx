@@ -21,7 +21,7 @@ const mono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "RE-PAIR — get connected to a repairman near you",
+  title: "RE-PAIR — find reliable repair workers and jobs",
   description:
     "Pick your location, tell us what's broken, and get connected to a vetted repairman on WhatsApp.",
 };
