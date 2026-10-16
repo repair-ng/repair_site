@@ -2,7 +2,8 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 COPY package.json package-lock.json* ./
-RUN npm ci
+# Uses the lockfile when it's in sync; falls back to a normal install if package.json changed.
+RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
 FROM node:22-alpine AS build
 WORKDIR /app

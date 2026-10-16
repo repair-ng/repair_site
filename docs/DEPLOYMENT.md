@@ -30,9 +30,33 @@ Rules that keep it private:
 - Repo with this code pushed to GitHub/GitLab/Gitea (connect it under Dokploy → Settings → Git).
 - A Paystack account (start in **Test mode**).
 
-Generate secrets (run locally): `openssl rand -base64 32` — one each for the Postgres owner password, `repair_app` password, MinIO root password, MinIO app key secret, and `CRON_SECRET`.
+Generate secrets locally with **hex** (base64 contains `+ / =` which break database URLs): `openssl rand -hex 24` — one each for the Postgres owner password, `repair_app` password, MinIO root password, MinIO app key secret, and `CRON_SECRET`.
 
-## 2. PostgreSQL (Dokploy-managed database)
+## 1a. FASTEST PATH — one Compose stack (recommended)
+
+`docker-compose.yml` in the repo root defines everything: `repair-web`, `repair-db` (Postgres 16), `repair-minio`, and a one-shot `minio-init` that creates the private bucket and a bucket-scoped app key. The first Postgres start also creates the least-privilege `repair_app` role (`db/init/10-roles.sh`), so **steps 3b and the manual MinIO key/bucket creation below are done for you**.
+
+1. Dokploy → project → **Create Service → Compose** → Provider **Git** (your repo/branch) → Compose Path `./docker-compose.yml`.
+2. **Environment** tab:
+   ```
+   APP_BASE_URL=https://app.example.com
+   POSTGRES_PASSWORD=<openssl rand -hex 24>
+   REPAIR_APP_PASSWORD=<openssl rand -hex 24>
+   MINIO_ROOT_USER=<not "minioadmin">
+   MINIO_ROOT_PASSWORD=<openssl rand -hex 24>
+   MINIO_API_DOMAIN=s3.example.com
+   MINIO_CONSOLE_DOMAIN=minio.example.com
+   S3_SECRET_KEY=<openssl rand -hex 24>
+   PAYSTACK_SECRET_KEY=sk_test_...
+   CRON_SECRET=<openssl rand -hex 24>
+   ```
+   (`S3_ACCESS_KEY` defaults to `repair-app`; `PAYSTACK_ENFORCE_IPS` defaults to `true`.) A missing required variable stops the deploy with a clear message.
+3. **Domains** tab (HTTPS on, Let's Encrypt for each): `app.example.com` → service `repair-web` port `3000`; `s3.example.com` → `repair-minio` port `9000`; `minio.example.com` → `repair-minio` port `9001`.
+4. **Deploy.** Logs should show `migrations up to date` from `repair-web`. Then continue at **step 5 (Paystack webhook)**, **6 (cron: target service `repair-web`)** and **7 (checklist)**.
+
+Notes: `repair-db` is only on the stack's private network (no `ports`, not on `dokploy-network`). The role-creation script runs only when the `pgdata` volume is first created; if you deployed an earlier version first, delete that volume (data loss!) or apply `db/roles.sql` by hand. Everything below (Sections 2–4) is the alternative where Postgres and MinIO are separate Dokploy services.
+
+## 2. (Alternative path) PostgreSQL as a Dokploy-managed database
 
 1. Dokploy → **Create Project** `repair` → **Create Service → Database → PostgreSQL**.
 2. App name `repair-postgres` · Database name `repair` · User `repair_owner` · strong password · image `postgres:16`.

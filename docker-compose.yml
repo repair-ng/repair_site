@@ -1,0 +1,109 @@
+# RE-PAIR — full stack for Dokploy (Create Service -> Compose -> Git, compose path ./docker-compose.yml).
+#
+#   Public (via Dokploy Domains tab -> Traefik + Let's Encrypt):
+#       repair-web   :3000   e.g. app.example.com        (UI, API, /api/payment/webhook)
+#       repair-minio :9000   e.g. s3.example.com         (S3 API)
+#       repair-minio :9001   e.g. minio.example.com      (Console)
+#   Private (stack-internal "default" network only, nothing published on the host):
+#       repair-db    :5432   PostgreSQL
+#
+# Required variables go in Dokploy's Environment tab (see docs/DEPLOYMENT.md). Use HEX secrets for
+# anything that ends up inside a URL:  openssl rand -hex 24   (base64 contains + / = which break URLs)
+
+services:
+  repair-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      repair-db:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    environment:
+      NODE_ENV: production
+      APP_BASE_URL: ${APP_BASE_URL:?set APP_BASE_URL, e.g. https://app.example.com}
+      # runtime: least-privilege role (cannot DROP/ALTER tables)
+      DATABASE_URL: postgresql://repair_app:${REPAIR_APP_PASSWORD:?set REPAIR_APP_PASSWORD}@repair-db:5432/repair
+      # migrations at container start: owner role
+      MIGRATION_DATABASE_URL: postgresql://repair_owner:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@repair-db:5432/repair
+      S3_ENDPOINT: http://repair-minio:9000
+      S3_REGION: us-east-1
+      S3_BUCKET: repair-media
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-repair-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      PAYSTACK_SECRET_KEY: ${PAYSTACK_SECRET_KEY:?set PAYSTACK_SECRET_KEY}
+      PAYSTACK_ENFORCE_IPS: ${PAYSTACK_ENFORCE_IPS:-true}
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET (24+ chars)}
+    expose: ["3000"]
+    networks:
+      - default           # private: talks to repair-db and repair-minio
+      - dokploy-network   # so Traefik can route the public domain to it
+
+  repair-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: repair
+      POSTGRES_USER: repair_owner
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+      REPAIR_APP_PASSWORD: ${REPAIR_APP_PASSWORD:?set REPAIR_APP_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U repair_owner -d repair"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    networks:
+      - default           # NOT on dokploy-network and no "ports": unreachable from outside the stack
+
+  repair-minio:
+    image: minio/minio:latest   # pin to a dated RELEASE.* tag once you're live
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?set MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?set MINIO_ROOT_PASSWORD}
+      MINIO_SERVER_URL: https://${MINIO_API_DOMAIN:?set MINIO_API_DOMAIN, e.g. s3.example.com}
+      MINIO_BROWSER_REDIRECT_URL: https://${MINIO_CONSOLE_DOMAIN:?set MINIO_CONSOLE_DOMAIN, e.g. minio.example.com}
+    volumes:
+      - miniodata:/data
+    expose: ["9000", "9001"]
+    networks:
+      - default
+      - dokploy-network
+
+  # One-shot job: creates the PRIVATE bucket + a bucket-scoped access key for the app (never the root key).
+  minio-init:
+    image: minio/mc:latest
+    restart: "no"
+    depends_on:
+      - repair-minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-repair-app}
+      S3_SECRET_KEY: ${S3_SECRET_KEY}
+    volumes:
+      - ./docker/minio-policy.json:/policy.json:ro
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://repair-minio:9000 \"$$MINIO_ROOT_USER\" \"$$MINIO_ROOT_PASSWORD\" >/dev/null 2>&1; do echo waiting for minio; sleep 2; done;
+      mc mb --ignore-existing local/repair-media;
+      mc admin policy create local repair-app /policy.json 2>/dev/null || mc admin policy add local repair-app /policy.json;
+      mc admin user add local \"$$S3_ACCESS_KEY\" \"$$S3_SECRET_KEY\" 2>/dev/null || true;
+      mc admin policy attach local repair-app --user \"$$S3_ACCESS_KEY\" 2>/dev/null || mc admin policy set local repair-app user=\"$$S3_ACCESS_KEY\" || true;
+      echo minio ready"
+    networks:
+      - default
+
+volumes:
+  pgdata:
+  miniodata:
+
+networks:
+  dokploy-network:
+    external: true

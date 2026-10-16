@@ -1,0 +1,30 @@
+<svg viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="450" fill="#111C33"/>
+  <circle cx="130" cy="120" r="170" fill="#1B2637"/>
+  <circle cx="660" cy="360" r="170" fill="#1B2637"/>
+  <rect x="0" y="360" width="800" height="90" fill="#0C1220"/>
+
+  <!-- wall socket plate -->
+  <rect x="300" y="110" width="200" height="260" rx="18" fill="#F7F5F0"/>
+  <rect x="330" y="150" width="140" height="80" rx="10" fill="#101826"/>
+  <rect x="355" y="170" width="10" height="30" rx="4" fill="#F7F5F0"/>
+  <rect x="395" y="170" width="10" height="30" rx="4" fill="#F7F5F0"/>
+  <circle cx="400" cy="290" r="20" fill="#0FA3A3"/>
+  <circle cx="400" cy="290" r="9" fill="#101826"/>
+
+  <!-- lightning bolt -->
+  <path d="M420 190 L385 260 L410 260 L380 340 L450 250 L420 250 Z" fill="#F4650B"/>
+
+  <!-- screwdriver -->
+  <g transform="rotate(-30 590 250)">
+    <rect x="580" y="150" width="14" height="120" rx="6" fill="#0FA3A3"/>
+    <rect x="572" y="120" width="30" height="45" rx="8" fill="#E4DFD4"/>
+  </g>
+
+  <!-- pliers -->
+  <g transform="translate(180,260) rotate(15)" fill="none" stroke="#E4DFD4" stroke-width="9" stroke-linecap="round">
+    <path d="M0 0 L40 -60"/>
+    <path d="M14 6 L60 -50"/>
+    <circle cx="7" cy="3" r="10" fill="#E4DFD4" stroke="none"/>
+  </g>
+</svg>

@@ -1,0 +1,44 @@
+<svg viewBox="0 0 800 450" xmlns="http://www.w3.org/2000/svg">
+  <rect width="800" height="450" fill="#101826"/>
+  <circle cx="640" cy="90" r="180" fill="#1B2637"/>
+  <circle cx="90" cy="380" r="140" fill="#1B2637"/>
+
+  <!-- workbench -->
+  <rect x="0" y="360" width="800" height="90" fill="#0C1220"/>
+
+  <!-- phone -->
+  <rect x="330" y="120" width="140" height="240" rx="18" fill="#F7F5F0"/>
+  <rect x="345" y="150" width="110" height="180" rx="4" fill="#101826"/>
+  <circle cx="400" cy="340" r="8" fill="#101826"/>
+
+  <!-- crack -->
+  <path d="M400 170 L420 210 L390 240 L430 280 L405 320" stroke="#F4650B" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- screwdriver -->
+  <g transform="rotate(35 250 260)">
+    <rect x="230" y="150" width="14" height="120" rx="6" fill="#0FA3A3"/>
+    <rect x="222" y="120" width="30" height="45" rx="8" fill="#F4650B"/>
+  </g>
+
+  <!-- wrench -->
+  <g transform="rotate(-25 560 260)">
+    <rect x="540" y="200" width="16" height="130" rx="7" fill="#E4DFD4"/>
+    <circle cx="548" cy="190" r="26" fill="none" stroke="#E4DFD4" stroke-width="14"/>
+  </g>
+
+  <!-- floating gear -->
+  <g transform="translate(590,150)" fill="#F4650B" opacity="0.9">
+    <circle r="20"/>
+    <g stroke="#F4650B" stroke-width="8">
+      <line x1="0" y1="-28" x2="0" y2="-18"/>
+      <line x1="0" y1="28" x2="0" y2="18"/>
+      <line x1="-28" y1="0" x2="-18" y2="0"/>
+      <line x1="28" y1="0" x2="18" y2="0"/>
+      <line x1="-20" y1="-20" x2="-13" y2="-13"/>
+      <line x1="20" y1="20" x2="13" y2="13"/>
+      <line x1="-20" y1="20" x2="-13" y2="13"/>
+      <line x1="20" y1="-20" x2="13" y2="-13"/>
+    </g>
+    <circle r="8" fill="#101826"/>
+  </g>
+</svg>
